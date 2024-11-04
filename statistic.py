@@ -57,18 +57,18 @@ def run_convergence_trials(N, a, epsilon, alpha=1):
 
     # 将 xi 和 hops 数据转换为 DataFrame
     df = pd.DataFrame({'xi': xi_data, 'hops': hops_data})
-    ax1.scatter(df['hops'], df['xi'], color='red', marker='+', alpha=0.5)
+    ax1.scatter(df['hops'], df['xi'], color='red', marker='+', alpha=0.1)
 
     ax2 = ax1.twinx()
     ax2.set_ylabel('Path Length CDF')
     total_hops.multiply_all(1/N)
 
-    cdf = np.cumsum(total_hops.array)
-    # cdf = total_hops.array
+    # cdf = np.cumsum(total_hops.array)
+    cdf = total_hops.array
 
     ax2.plot(range(1, max_hops + 1), cdf, color='black', marker='x', alpha=0.5)
     for i, value in enumerate(cdf):
-        ax2.text(i + 1, cdf[i], f'{value * 100:.1f}%', fontsize=8, ha='center', va='bottom')
+        ax2.text(i + 1, cdf[i], f'{value * 100:.2f}%', fontsize=8, ha='center', va='bottom')
 
     mean_times = np.mean(times_list)
     variance_times = np.var(times_list)
@@ -77,13 +77,12 @@ def run_convergence_trials(N, a, epsilon, alpha=1):
 
 
     # 计算 -log(xi)
-    df['log_xi'] = -np.log(df['xi'])
-
+    # df['log_xi'] = -np.log(df['xi'])
     # 定义组间隔 d
-    d = 1
+    d = 0.01
 
     # 分组
-    df['group'] = (df['log_xi'] // d).astype(int)
+    df['group'] = (df['xi'] // d).astype(int)
 
     # 统计每组内各 hop 的频次
     freq_table = df.groupby(['group', 'hops']).size().unstack(fill_value=0)
@@ -117,13 +116,27 @@ def run_convergence_trials(N, a, epsilon, alpha=1):
     # 绘制第二张堆积柱形图
     plt.figure(figsize=(10, 6))
 
-    # 确保 bottom_values 是 numpy 数组
-    bottom_values = np.zeros(len(proportion_table.index))
+    # 绘制比例图/频次图
+    # plot_freq = False
+    plot_freq = True
+    
 
-    # 循环绘制每一列
-    for column in proportion_table.columns:
-        plt.bar(proportion_table.index, proportion_table[column].values, bottom=bottom_values, label=str(column))
-        bottom_values += proportion_table[column].values  # 更新底部位置
+    if plot_freq:
+        # 确保 bottom_values 是 numpy 数组
+        bottom_values = np.zeros(len(freq_table.index))
+
+        # 循环绘制每一列
+        for column in freq_table.columns:
+            plt.bar(freq_table.index, freq_table[column].values, bottom=bottom_values, label=str(column))
+            bottom_values += freq_table[column].values  # 更新底部位置
+    else:
+        # 确保 bottom_values 是 numpy 数组
+        bottom_values = np.zeros(len(proportion_table.index))
+
+        # 循环绘制每一列
+        for column in proportion_table.columns:
+            plt.bar(proportion_table.index, proportion_table[column].values, bottom=bottom_values, label=str(column))
+            bottom_values += proportion_table[column].values  # 更新底部位置
 
     # 添加标签和标题
     plt.xlabel(r'$x\_range\ (e^{-(x+1)},\ e^{-x})$')
@@ -140,10 +153,10 @@ def run_convergence_trials(N, a, epsilon, alpha=1):
     return mean_times, variance_times
 
 # 示例调用
-N = 1000  # 运行次数
-a = 0.5
-epsilon = 0.001
-alpha = 0.1
+N = 10000  # 运行次数
+a = 0.8
+epsilon = 0.01
+alpha = 0.22
 
 mean_result, variance_result = run_convergence_trials(N, a, epsilon, alpha)
 print(f'均值: {mean_result}, 方差: {variance_result}')
